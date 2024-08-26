@@ -1,11 +1,15 @@
 #------------------------
 #Setup Dynamic TOPMODEL observations
 #------------------------
+## presume running in root of github repository
+rm(list=ls())
 
-#Find all necessary files with climate (NLDAS) and discharge (NWIS) data
-precip_files = list.files(wd,pattern="APCP*")[!grepl(".xml",list.files(wd,pattern="APCP*"))]
-pet_files = list.files(wd,pattern="PEVAP*")[!grepl(".xml",list.files(wd,pattern="PEVAP*"))]
-flow_file = list.files(wd,pattern="NWIS*")[grepl(".txt",list.files(wd,pattern="NWIS*"))]
+wd <- "./dynatop"
+
+##Find all necessary files with climate (NLDAS) and discharge (NWIS) data
+precip_files = list.files(wd,pattern="APCP*.+.txt", full.names=TRUE)
+pet_files = list.files(wd,pattern="PEVAP*.+.txt", full.names=TRUE)
+flow_file = list.files(wd,pattern="NWIS*.+.txt",full.names=TRUE)
   
 #Pre-allocate memory for data records (NOTE: set nrows equal to the number of records being imported; 1 year = 8759 hourly records in 2010)
 precip = matrix(NA,ncol = length(precip_files),nrow = 8759)
@@ -13,12 +17,12 @@ pet = matrix(NA,ncol = length(precip_files),nrow = 8759)
 
 #Load NLDAS climate data
 for (i in 1: length(precip_files)){
-  file_content <- readLines(paste(wd,precip_files[i],sep="\\"))
+  file_content <- readLines(precip_files[i])
   start <- which(grepl("2010-01-01 01Z", file_content))
   end <- which(grepl("2010-12-31 23Z", file_content))
   precip[,i] <- read.table(text = paste0(trimws(file_content[start : end]),collapse = "\n"))[,3]
   
-  file_content <- readLines(paste(wd,pet_files[i],sep="\\"))
+  file_content <- readLines(pet_files[i])
   start <- which(grepl("2010-01-01 01Z", file_content))
   end <- which(grepl("2010-12-31 23Z", file_content))
   pet[,i] <- read.table(text = paste0(trimws(file_content[start : end]),collapse = "\n"))[,3]
@@ -39,7 +43,7 @@ pet <- aggregate(pet ~ date, pet, sum) #total per day
 pet$pet <- ifelse(pet$pet<0,0,pet$pet)
 
 #Load NWIS daily discharge data
-file_content <- readLines(paste(wd,flow_file,sep="\\"))
+file_content <- readLines(flow_file)
 start <- which(grepl(unique(substr(as.character(date),1,5)), file_content))[1]
 end <- rev(which(grepl(unique(substr(as.character(date),1,5)), file_content)))[1]
 flow =  read.table(text = paste0(trimws(file_content[start : end]),collapse = "\n"))
@@ -51,5 +55,7 @@ obs <- data.frame("date" = precip$date,
                   "pet" = pet$pet #m accumulated over time step
                   )
 
-rm(file_content,start,end,pet_files,precip_files,i,flow_file,pet,precip,flow)
+saveRDS(obs,"processed_obs.rds")
+
+#rm(file_content,start,end,pet_files,precip_files,i,flow_file,pet,precip,flow)
 

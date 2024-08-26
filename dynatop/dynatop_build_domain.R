@@ -13,15 +13,14 @@
 #devtools::install_github("waternumbers/dynatopGIS")
 library("dynatopGIS")
 library("terra")
-library("raster")
 library("sf")
 library("readxl")
 
 #Set working directory
-wd <- ""
+wd <- "./dynatop/" ## assume starting in root of the github repository
 
 #Create temporary directory for model
-demo_dir <- tempfile("dynatop_drb")
+demo_dir <- "test_project" ## don't want project in tmp - just used in vignette to pass CRAN checks tempfile("dynatop_drb")
 dir.create(demo_dir)
 
 #Initialize model object specifying the location of the meta data file
@@ -32,19 +31,19 @@ ctch <- dynatopGIS$new(file.path(demo_dir))
 #------------------------
 
 #Load DEM file (raster)
-dem <- terra::rast(list.files(wd,pattern="DEM*"))
+dem <- terra::rast(list.files(wd,pattern="DEM*",full.names=TRUE))
 
 #Load catchment boundary (shapefile)
-huc <- read_sf(list.files(wd,pattern="HUC*")[grepl(".shp",list.files(wd,pattern="HUC*"))])
+huc <- read_sf(list.files(wd,pattern="HUC*.shp",full.names=TRUE))
 huc <- sf::st_transform(huc, crs(dem)) # ensure crs projections are matching
 
 #Crop DEM to catchment boundary
-dem <- raster::mask(crop(dem,ext(huc)),huc)
+dem <- terra::mask(crop(dem,ext(huc)),huc)
 dem <- terra::extend(dem,1) # pad with NA values
 
 #Load channel information and shapefile (with attributes)
-channel_info <- readxl::read_excel(list.files(wd,pattern="Channel*")[grepl(".xlsx",list.files(wd,pattern="Channel*"))])
-shp <- sf::read_sf(list.files(wd,pattern="Channel*")[grepl(".shp",list.files(wd,pattern="Channel*"))])
+channel_info <- readxl::read_excel(list.files(wd,pattern="Channel.+xlsx",full.names=TRUE))
+shp <- sf::read_sf(list.files(wd,pattern="Channel.+.shp",full.names=TRUE))
 shp <- sf::st_transform(shp, crs(dem)) #ensure crs projections are matching
 
 #Process channel
@@ -120,7 +119,7 @@ ctch$create_model(file.path(demo_dir,"new_model"),"atb_class_band")
 #Check  if tiff and rds files were successfully created
 list.files(demo_dir,pattern="new_model*")
 
-rm(catchment_outline,channel_info,chn,dem,shp,sp_lines,property_names,huc)
+##rm(catchment_outline,channel_info,chn,dem,shp,sp_lines,property_names,huc)
 
 
 
