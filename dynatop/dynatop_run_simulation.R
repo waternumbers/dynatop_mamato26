@@ -29,7 +29,7 @@ dynatop_drb_map <- terra::rast(file.path(demo_dir,"new_model.tif"))
 
 obs <- readRDS("processed_obs.rds")
 #Convert to xts object format
-xts.obs <- xts(obs[,c("flow","precip","pet")], order.by = as.Date(obs$date))
+xts.obs <- xts(obs[,c("flow","precip","pet")], order.by = as.POSIXct(obs$date)) ## THIS IS THE CHANGE
 #xts.obs <- xts.obs[90:180,]
 
 
@@ -49,8 +49,8 @@ for(i in 1:length(hru)){
     ## root zone parameters
     hru[[i]]$rz$parameters["s_rzmax"] <- 0.15 #Maximum capacity of the root zone (available water capacity to plants) (m)
     ## surface parameters
-      hru[[i]]$sf$parameters["c_sf"] <- 0.5 #Channel routing wave velocity (celerity) (m/s)
-      hru[[i]]$sf$parameters["d_sf"] <- (hru[[i]]$sf$parameters["c_sf"]*hru[[i]]$properties["Dx"])/2 
+      hru[[i]]$sf$parameters["c_sf"] <- 1 #Channel routing wave velocity (celerity) (m/s)
+      ##hru[[i]]$sf$parameters["d_sf"] <- (hru[[i]]$sf$parameters["c_sf"]*hru[[i]]$properties["Dx"])/2 
   }else{
     ## then HRU is a channel - set so no subsurface response
     ## saturated zone parameters
@@ -58,7 +58,7 @@ for(i in 1:length(hru)){
     ## root zone parameters
     hru[[i]]$rz$parameters["s_rzmax"] <- 0.001
     ## surface parameters
-      hru[[i]]$sf$parameters["c_sf"] <-8#0.4 #m/s
+      hru[[i]]$sf$parameters["c_sf"] <- 0.4 #m/s
       hru[[i]]$sf$parameters["d_sf"] <- (hru[[i]]$sf$parameters["c_sf"]*hru[[i]]$properties["Dx"])/2 
   }
   ## initialization parameters
@@ -78,13 +78,18 @@ ctch_mdl$add_data(xts.obs)
 #------------------------
 #Running dynamic TOPMODEL
 #------------------------
-
-#Initialize model with recharge rate
+states <- list()
+##Initialize model with recharge rate
 ctch_mdl$initialise()$plot_state("s_sz")
+states[[1]] <- ctch_mdl$get_states()
+
+       
 #Perform initial simulation
-sim1 <- ctch_mdl$sim(dynatop_drb_model$output_flux,sub_step=60)$get_output()
-#Save final model state 
+sim1 <- ctch_mdl$sim(dynatop_drb_model$output_flux)$get_output()
+##Save final model state 
 ctch_mdl$plot_state("s_sz")
+
+
 ## get initial output
 ## Re-run with previous model save state
 sim2 <- ctch_mdl$sim(dynatop_drb_model$output_flux)$get_output()
